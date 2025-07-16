@@ -4,11 +4,13 @@
         <TargetFramework>net8.0</TargetFramework>
         <Nullable>enable</Nullable>
         <ImplicitUsings>enable</ImplicitUsings>
+        <UserSecretsId>48b762d7-8061-4e64-a081-2abb88a3470e</UserSecretsId>
     </PropertyGroup>
 
     <ItemGroup>
+      <PackageReference Include="Azure.AI.OpenAI" Version="2.1.0" />
       <PackageReference Include="Microsoft.Extensions.AI" Version="9.6.0" />
-      <PackageReference Include="Microsoft.Extensions.AI.Ollama" Version="9.6.0-preview.1.25310.2" />
+      <PackageReference Include="Microsoft.Extensions.AI.OpenAI" Version="9.7.1-preview.1.25365.4" />
       <PackageReference Include="ModelContextProtocol" Version="0.3.0-preview.2" />
     </ItemGroup>
 

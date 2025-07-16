@@ -1,3 +1,5 @@
+using Azure;
+using Azure.AI.OpenAI;
 using ChatSimpleClient.Models;
 using ChatSimpleClient.Services;
 using Microsoft.AspNetCore.Mvc;
@@ -6,8 +8,8 @@ using Microsoft.Extensions.Options;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddOptions<OllamaSettings>()
-    .Bind(builder.Configuration.GetSection("OllamaSettings"))
+builder.Services.AddOptions<AzureOpenAiSettings>()
+    .Bind(builder.Configuration.GetSection("AzureOpenAiSettings"))
     .ValidateDataAnnotations()
     .ValidateOnStart();
 
@@ -20,9 +22,15 @@ builder.Services.AddSingleton<SqlServerBackupToolService>();
 
 builder.Services.AddChatClient(sp =>
 {
-    var ollamaOptions = sp.GetRequiredService<IOptions<OllamaSettings>>();
+    var azureOpenAiSettings = sp.GetRequiredService<IOptions<AzureOpenAiSettings>>();
 
-    return new OllamaChatClient(ollamaOptions.Value.Url, ollamaOptions.Value.Model);
+    var client = new AzureOpenAIClient(new Uri(azureOpenAiSettings.Value.Url),
+        new AzureKeyCredential(azureOpenAiSettings.Value.ApiKey));
+    
+    return client.GetChatClient(azureOpenAiSettings.Value.DeploymentName).AsIChatClient()
+        .AsBuilder()
+        .UseFunctionInvocation()
+        .Build();
 });
 
 var app = builder.Build();
@@ -30,21 +38,11 @@ var app = builder.Build();
 app.MapGet("/", () => Results.Ok(":)"));
 
 app.MapPost("/",
-    async ([FromBody] PromptModel prompt, [FromServices] IChatClient client,
+    async ([FromBody] PromptModel prompt,
         [FromServices] SqlServerBackupToolService backupToolService, CancellationToken cancellationToken) =>
     {
-        var tools = await backupToolService.GetAIToolsAsync(cancellationToken);
-        var chatOptions = new ChatOptions()
-        {
-            MaxOutputTokens = 1000,
-            AllowMultipleToolCalls = true,
-            Tools = [..tools],
-            ToolMode = ChatToolMode.Auto
-        };
-
-        var resp = await client.GetResponseAsync(prompt.Prompt, chatOptions, cancellationToken);
-
-        return Results.Ok(resp.Text);
+        var res = await backupToolService.BackupAsync(prompt.Prompt, cancellationToken);
+        return Results.Ok(res);
     });
 
 app.Run();

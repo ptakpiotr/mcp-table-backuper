@@ -1,4 +1,5 @@
 ﻿using ChatSimpleClient.Models;
+using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Options;
 using ModelContextProtocol.Client;
 
@@ -6,9 +7,19 @@ namespace ChatSimpleClient.Services;
 
 public class SqlServerBackupToolService(
     IOptions<SseMcpServerSettings> serverSettings,
-    ILogger<SqlServerBackupToolService> logger)
+    ILogger<SqlServerBackupToolService> logger,
+    IChatClient client)
 {
-    public async Task<IList<McpClientTool>> GetAIToolsAsync(CancellationToken cancellationToken = default)
+    private async Task<IList<McpClientTool>> GetAiToolsAsync(IMcpClient mcpClient, CancellationToken cancellationToken = default)
+    {
+        var tools = await mcpClient.ListToolsAsync(cancellationToken: cancellationToken);
+
+        logger.LogInformation("Found {toolsCount} tools", tools.Count);
+
+        return tools;
+    }
+
+    public async Task<string> BackupAsync(string prompt, CancellationToken cancellationToken = default)
     {
         var clientTransport = new SseClientTransport(new()
         {
@@ -17,11 +28,17 @@ public class SqlServerBackupToolService(
 
         await using var mcpClient =
             await McpClientFactory.CreateAsync(clientTransport, cancellationToken: cancellationToken);
+        
+        var tools = await GetAiToolsAsync(mcpClient, cancellationToken);
+        
+        var chatOptions = new ChatOptions()
+        {
+            Tools = [..tools],
+            ToolMode = ChatToolMode.RequireAny
+        };
 
-        var tools = await mcpClient.ListToolsAsync(cancellationToken: cancellationToken);
+        var resp = await client.GetResponseAsync(prompt, chatOptions, cancellationToken);
 
-        logger.LogInformation("Found {toolsCount} tools", tools.Count);
-
-        return tools;
+        return resp.Text;
     }
 }
