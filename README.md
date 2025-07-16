@@ -8,6 +8,7 @@ Describe what tables in natural language you want to backup and tool will do tha
 ## 🚀 Features
 
 - 🔗 MCP server exposing backup capability
-- 📦 Creates backup tables dynamically (e.g. `Orders_Backup_{TIMESTAMP}`)
+- 📦 Creates backup tables dynamically (`backup_tables` tool)
+- 🪟 Lists all backups newer than (`get_backups` tool)
 - 🧠 Orchestrated with Microsoft Extensions AI + LLM (e.g. Llama 3.2:3B or DeepSeek)
-- 🐳 MSSQL Docker container support
+- 🐳 MSSQL compatibility
